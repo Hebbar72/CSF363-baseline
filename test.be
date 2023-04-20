@@ -1,2 +1,5 @@
-let abc = 123 * 20 + 20 + (22 / 2) - 3;
-dbg abc + abc;
+let a : long = 1000;
+let b : int = 5;
+b = a + 10;
+dbg b;
+

@@ -12,9 +12,9 @@ Base node class. Defined as `abstract`.
 */
 struct Node {
     enum NodeType {
-        BIN_OP, INT_LIT, STMTS, ASSN, DBG, IDENT
+        BIN_OP, INT_LIT, STMTS, ASSN, DBG, IDENT, DECL
     } type;
-
+    int data_type;
     virtual std::string to_string() = 0;
     virtual llvm::Value *llvm_codegen(LLVMCompiler *compiler) = 0;
 };
@@ -64,7 +64,7 @@ struct NodeDecl : public Node {
     std::string identifier;
     Node *expression;
 
-    NodeDecl(std::string id, Node *expr);
+    NodeDecl(std::string id, std::string data_type, Node *expr);
     std::string to_string();
     llvm::Value *llvm_codegen(LLVMCompiler *compiler);
 };
@@ -85,8 +85,18 @@ struct NodeDebug : public Node {
 */
 struct NodeIdent : public Node {
     std::string identifier;
+    int dtype;
 
-    NodeIdent(std::string ident);
+    NodeIdent(std::string ident, int data_type);
+    std::string to_string();
+    llvm::Value *llvm_codegen(LLVMCompiler *compiler);
+};
+
+struct NodeAssign : public Node {
+    std::string identifier;
+    Node *expression;
+
+    NodeAssign(std::string id, std::string d_type, Node *expr);
     std::string to_string();
     llvm::Value *llvm_codegen(LLVMCompiler *compiler);
 };
