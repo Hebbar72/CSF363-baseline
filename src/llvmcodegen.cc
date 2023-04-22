@@ -19,6 +19,16 @@
 The documentation for LLVM codegen, and how exactly this file works can be found
 ins `docs/llvm.md`
 */
+extern int yyerror(std::string msg);
+
+int get_data_type(LLVMCompiler *compiler, Value* val)
+{
+    if(val->getType()->isIntegerTy(16))
+        return 1;
+    if(val->getType()->isIntegerTy(32))
+        return 2;
+    return 3;
+}
 
 void LLVMCompiler::compile(Node *root) {
     /* Adding reference to print_i in the runtime library */
@@ -96,18 +106,39 @@ Value *NodeDebug::llvm_codegen(LLVMCompiler *compiler) {
     Value *expr = expression->llvm_codegen(compiler);
 
     Function *printi_func = compiler->module.getFunction("printi");
+    expr = compiler->builder.CreateIntCast(expr, compiler->builder.getInt64Ty(), 1, "final");
     compiler->builder.CreateCall(printi_func, {expr});
 
     return expr;
 }
 
 Value *NodeInt::llvm_codegen(LLVMCompiler *compiler) {
+    if(data_type == 1)
+        return compiler->builder.getInt16(value);
+    else if(data_type == 2)
+        return compiler->builder.getInt32(value);
     return compiler->builder.getInt64(value);
 }
 
 Value *NodeBinOp::llvm_codegen(LLVMCompiler *compiler) {
     Value *left_expr = left->llvm_codegen(compiler);
     Value *right_expr = right->llvm_codegen(compiler);
+    int temp = std::max(get_data_type(compiler, left_expr), get_data_type(compiler, right_expr));
+    if(temp == 1)
+    {
+        compiler->builder.CreateIntCast(left_expr, compiler->builder.getInt16Ty(), 1, "name1");
+        compiler->builder.CreateIntCast(right_expr, compiler->builder.getInt16Ty(), 1, "name2");
+    }
+    else if(temp == 2)
+    {
+        compiler->builder.CreateIntCast(left_expr, compiler->builder.getInt32Ty(), 1, "name3");
+        compiler->builder.CreateIntCast(right_expr, compiler->builder.getInt32Ty(), 1, "name4");
+    }
+    else
+    {
+        compiler->builder.CreateIntCast(left_expr, compiler->builder.getInt64Ty(), 1, "name5");
+        compiler->builder.CreateIntCast(right_expr, compiler->builder.getInt64Ty(), 1, "name6");
+    }
 
     switch(op) {
         case PLUS:
@@ -124,16 +155,36 @@ Value *NodeBinOp::llvm_codegen(LLVMCompiler *compiler) {
 
 Value *NodeDecl::llvm_codegen(LLVMCompiler *compiler) {
     Value *expr = expression->llvm_codegen(compiler);
-
     IRBuilder<> temp_builder(
         &MAIN_FUNC->getEntryBlock(),
         MAIN_FUNC->getEntryBlock().begin()
     );
 
-    AllocaInst *alloc = temp_builder.CreateAlloca(compiler->builder.getInt64Ty(), 0, identifier);
 
+    AllocaInst* alloc;
+    if(data_type == 1)
+        alloc = temp_builder.CreateAlloca(compiler->builder.getInt16Ty(), 0, identifier);
+    else if(data_type == 2)
+        alloc = temp_builder.CreateAlloca(compiler->builder.getInt32Ty(), 0, identifier);
+    else
+        alloc = temp_builder.CreateAlloca(compiler->builder.getInt64Ty(), 0, identifier);
+
+    std::string type_str1;
+    raw_string_ostream rso(type_str1);
+    expr->getType()->print(rso);
+    if(type_str1 == "i16" && data_type == 2)
+        expr = compiler->builder.CreateIntCast(expr, compiler->builder.getInt32Ty(), 1, "short to int");
+    else if(type_str1 == "i16" && data_type == 3)
+        expr = compiler->builder.CreateIntCast(expr, compiler->builder.getInt64Ty(), 1, "short to long");
+    else if(type_str1 == "i32" && data_type == 3)
+        expr = compiler->builder.CreateIntCast(expr, compiler->builder.getInt64Ty(), 1, "int to long");
+    else if((type_str1 == "i16" && data_type > 1) || (type_str1 == "i32" && data_type > 2))
+        yyerror("Type Mismatch");
+    
+    std::string type_str;
+    raw_string_ostream rso1(type_str);
+    expr->getType()->print(rso1);
     compiler->locals[identifier] = alloc;
-
     return compiler->builder.CreateStore(expr, alloc);
 }
 
@@ -144,8 +195,26 @@ Value *NodeAssign::llvm_codegen(LLVMCompiler *compiler) {
         &MAIN_FUNC->getEntryBlock(),
         MAIN_FUNC->getEntryBlock().begin()
     );
+    AllocaInst* alloc;
+    if(data_type == 1)
+        alloc = temp_builder.CreateAlloca(compiler->builder.getInt16Ty(), 0, identifier);
+    else if(data_type == 2)
+        alloc = temp_builder.CreateAlloca(compiler->builder.getInt32Ty(), 0, identifier);
+    else
+        alloc = temp_builder.CreateAlloca(compiler->builder.getInt64Ty(), 0, identifier);
 
-    AllocaInst *alloc = temp_builder.CreateAlloca(compiler->builder.getInt64Ty(), 0, identifier);
+    std::string type_str1;
+    raw_string_ostream rso(type_str1);
+    expr->getType()->print(rso);
+    if(type_str1 == "i16" && data_type == 2)
+        expr = compiler->builder.CreateIntCast(expr, compiler->builder.getInt32Ty(), 1, "short to int");
+    else if(type_str1 == "i16" && data_type == 3)
+        expr = compiler->builder.CreateIntCast(expr, compiler->builder.getInt64Ty(), 1, "short to long");
+    else if(type_str1 == "i32" && data_type == 3)
+        expr = compiler->builder.CreateIntCast(expr, compiler->builder.getInt64Ty(), 1, "int to long");
+    else if((type_str1 == "i16" && data_type > 1) || (type_str1 == "i32" && data_type > 2))
+        yyerror("Type Mismatch");
+    
 
     compiler->locals[identifier] = alloc;
 
@@ -156,6 +225,10 @@ Value *NodeIdent::llvm_codegen(LLVMCompiler *compiler) {
     AllocaInst *alloc = compiler->locals[identifier];
 
     // if your LLVM_MAJOR_VERSION >= 14
+    if(data_type == 1)
+        return compiler->builder.CreateLoad(compiler->builder.getInt16Ty(), alloc, identifier);
+    else if(data_type == 2)
+        return compiler->builder.CreateLoad(compiler->builder.getInt32Ty(), alloc, identifier);
     return compiler->builder.CreateLoad(compiler->builder.getInt64Ty(), alloc, identifier);
 }
 

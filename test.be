@@ -1,5 +1,5 @@
-let a : long = 1000;
-let b : int = 5;
-b = a + 10;
-dbg b;
+let a : int = 100;
+a = 100000000 + 5;
+dbg a;
+
 

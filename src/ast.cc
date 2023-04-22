@@ -28,7 +28,7 @@ std::string NodeBinOp::to_string() {
     return out;
 }
 
-NodeInt::NodeInt(int val) {
+NodeInt::NodeInt(long val) {
     type = INT_LIT;
     value = val;
     if(val <= INT16_MAX)
@@ -91,14 +91,14 @@ NodeAssign::NodeAssign(std::string id, std::string dtype, Node *expr) {
     type = ASSN;
     identifier = id;
     expression = expr;
-    if(dtype == "short" && expr->data_type == 1)
+    if(dtype == "short")// && expr->data_type == 1)
         data_type = 1;
-    else if(dtype == "int" && expr->data_type <= 2)
+    else if(dtype == "int")// && expr->data_type <= 2)
         data_type = 2;
-    else if(dtype == "long" && expr->data_type <= 3)
+    else if(dtype == "long")// && expr->data_type <= 3)
         data_type = 3;
-    else
-        yyerror("Type Mismatch");
+    // else
+    //     yyerror("Type Mismatch");
     
 }
 

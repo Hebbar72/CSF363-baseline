@@ -61,12 +61,12 @@ Stmt : TLET TIDENT TCOLON TTYPE TEQUAL Expr
         } else {
             symbol_table.insert($2, $4);
 
-            if($4 == "short" && $6->data_type > 1)
-                yyerror("Type Mismatch");
-            else if($4 == "int" && $6->data_type > 2)
-                yyerror("Type Mismatch");
-            else if($4 == "long" && $6->data_type > 3)
-                yyerror("Type Mismatch");
+            // if($4 == "short" && $6->data_type > 1)
+            //     yyerror("Type Mismatch");
+            // else if($4 == "int" && $6->data_type > 2)
+            //     yyerror("Type Mismatch");
+            // else if($4 == "long" && $6->data_type > 3)
+            //     yyerror("Type Mismatch");
             
             $$ = new NodeDecl($2, $4, $6);
         }
@@ -95,7 +95,7 @@ Stmt : TLET TIDENT TCOLON TTYPE TEQUAL Expr
      ;
 
 Expr : TINT_LIT               
-     { $$ = new NodeInt(stoi($1)); }
+     { $$ = new NodeInt(stol($1)); }
      | TIDENT
      { 
         if(symbol_table.contains($1))
